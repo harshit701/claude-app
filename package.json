@@ -1,0 +1,22 @@
+{
+  "name": "claude-app",
+  "version": "1.0.0",
+  "description": "A very basic Node.js + Express + TypeScript application",
+  "main": "index.ts",
+  "type": "module",
+  "scripts": {
+    "dev": "node --watch index.ts",
+    "start": "node index.ts",
+    "typecheck": "tsc",
+    "test": "node --test \"src/**/*.test.ts\""
+  },
+  "dependencies": {
+    "express": "^4.19.2",
+    "joi": "^18.2.3"
+  },
+  "devDependencies": {
+    "@types/express": "^4.17.21",
+    "@types/node": "^20.14.15",
+    "typescript": "^5.5.4"
+  }
+}
