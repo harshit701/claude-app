@@ -1,0 +1,240 @@
+# Project Instructions
+
+## Project
+
+This is a learning project for building a simple **Task Manager REST API** using:
+
+- Node.js
+- Express.js
+- TypeScript
+- npm
+
+The goal is to learn backend development and how to effectively use Claude Code.
+
+Keep the project simple, readable, and beginner-friendly. Do not over-engineer it.
+
+---
+
+## Architecture
+
+Use this layered architecture:
+
+```text
+HTTP Request
+     ↓
+Middleware
+     ↓
+Route
+     ↓
+Controller
+     ↓
+Service
+     ↓
+Repository
+     ↓
+Database/Mock-data file
+```
+
+### Responsibilities
+
+- **Routes:** Define API endpoints and connect them to controllers. No business logic.
+- **Controllers:** Handle HTTP requests/responses and call services. No business logic.
+- **Services:** Contain business logic. Do not depend on Express request/response objects.
+- **Repositories:** Handle data access and hide database/mock-data file implementation details from services.
+- **Middleware:** Handle cross-cutting concerns such as authentication, logging, validation, and error handling.
+- **Schemas:** Validate external input.
+- **Models:** Represent domain/application data.
+- **Types:** Backend-specific TypeScript types and interfaces.
+- **Utils:** Small reusable utilities. Do not use this as a dumping ground.
+- **Config:** Application and environment configuration.
+
+Preferred flow:
+
+```text
+Route → Controller → Service → Repository
+```
+
+Do not bypass layers without a clear reason.
+
+---
+
+## Task Manager
+
+The main resource is `Task`:
+
+```text
+id
+title
+description
+completed
+createdAt
+updatedAt
+```
+
+Initial API:
+
+```text
+POST   /tasks
+GET    /tasks
+GET    /tasks/:id
+PATCH  /tasks/:id
+DELETE /tasks/:id
+```
+
+Build features incrementally. Do not implement future features unless explicitly requested.
+
+---
+
+## Development Rules
+
+When working on this project:
+
+### Understand Before Changing
+
+- Read this `CLAUDE.md` before starting work.
+- Inspect the existing project structure and relevant files before making changes.
+- Understand existing code before modifying it.
+- Do not make assumptions about code that has not been inspected.
+
+### Work Incrementally
+
+- Implement only what I requested.
+- Make the smallest reasonable set of changes required.
+- Do not implement future features unless explicitly requested.
+- Do not refactor unrelated code.
+- Do not build the entire application automatically.
+
+### Explain Significant Changes
+
+Before making a significant architectural change:
+
+1. Explain what you plan to change.
+2. Explain why it is needed.
+3. Explain which layer it belongs to.
+4. Explain how it fits into the existing architecture.
+
+Then implement it.
+
+For small, obvious changes, do not unnecessarily stop for approval.
+
+### Preserve Separation of Concerns
+
+- Keep business logic in services.
+- Keep HTTP concerns in controllers.
+- Keep routing logic in routes.
+- Keep database access in repositories.
+- Keep cross-cutting concerns in middleware.
+- Do not put database logic in services.
+- Do not make services dependent on Express request/response objects.
+
+### Keep It Simple
+
+- Prefer simple and readable solutions.
+- Do not introduce unnecessary abstractions or design patterns.
+- Do not add folders or files without a clear purpose.
+- Avoid premature optimization.
+- Prefer existing project patterns over introducing new ones.
+
+### Dependencies
+
+Before adding a dependency:
+
+- Explain what it does.
+- Explain why it is needed.
+- Explain whether the requirement can reasonably be implemented without it.
+
+Do not install unnecessary packages.
+
+### Existing Code
+
+- Do not overwrite working code unnecessarily.
+- Do not delete existing functionality unless explicitly requested.
+- Do not modify unrelated files.
+- Follow existing naming and coding conventions.
+- Reuse existing code when appropriate.
+
+---
+
+## Learning Mode
+
+I am learning Claude Code and backend architecture.
+
+When implementing a feature:
+
+1. Briefly explain what will change.
+2. Explain where the change belongs and why.
+3. Implement the requested feature and its required supporting changes.
+4. Explain the important parts and request flow afterward.
+
+Prefer teaching the reasoning behind the implementation rather than simply generating code.
+
+Explain important architectural trade-offs when they exist.
+
+Do not explain basic JavaScript or TypeScript syntax unless I ask.
+
+---
+
+## Verification
+
+After making changes:
+
+- Run appropriate checks when possible.
+- Verify that TypeScript compiles.
+- Verify that the application still starts.
+- Run relevant tests when they exist.
+- Tell me what was verified and whether anything remains to be checked.
+
+---
+
+## Database
+
+Do not introduce a database until explicitly requested.
+
+Until then, use a simple in-memory approach where persistence is required for learning.
+
+When a database is introduced, keep database-specific logic inside repositories.
+
+Write now skip the database part and consider data persistence in data/tasks.json file.
+
+Data persistence is currently file-based. Use `src/data/tasks.json` as the source of truth.
+Keep seed/mock data separate from persistent data where practical.
+
+---
+
+## Testing
+
+Introduce tests gradually.
+
+When adding tests, explain:
+
+- What behavior is being tested.
+- Why the test belongs at that layer.
+- What behavior the test protects.
+
+Do not introduce a complex testing architecture unnecessarily.
+
+---
+
+## Git
+
+- Do not create Git commits unless explicitly requested.
+- Do not modify Git history.
+- Keep changes logically grouped so they can be committed later.
+
+---
+
+## Code Review
+
+Code reviews should identify problems and explain their reasoning before suggesting changes.
+
+Reviewers must not modify application code unless explicitly instructed.
+
+---
+
+## Important Rule
+
+**Do not anticipate my next requirement.**
+
+Only implement what I ask for and the minimum supporting changes required.
+
+The purpose of this project is for me to learn by building it incrementally with Claude Code.
