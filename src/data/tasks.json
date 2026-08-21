@@ -1,0 +1,26 @@
+[
+  {
+    "id": "1",
+    "title": "Set up project structure",
+    "description": "Create the layered folder structure for the backend.",
+    "completed": true,
+    "createdAt": "2026-08-18T09:00:00.000Z",
+    "updatedAt": "2026-08-18T09:30:00.000Z"
+  },
+  {
+    "id": "2",
+    "title": "Implement health check endpoint",
+    "description": "Add a GET /health endpoint to verify the server is running.",
+    "completed": true,
+    "createdAt": "2026-08-18T10:00:00.000Z",
+    "updatedAt": "2026-08-18T10:15:00.000Z"
+  },
+  {
+    "id": "3",
+    "title": "Implement task endpoints",
+    "description": "Add CRUD endpoints for the Task resource.",
+    "completed": false,
+    "createdAt": "2026-08-18T11:00:00.000Z",
+    "updatedAt": "2026-08-18T11:00:00.000Z"
+  }
+]
