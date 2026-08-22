@@ -1,4 +1,5 @@
 import express from "express";
+import { prisma } from "./config/database.ts";
 import { errorHandler } from "./middleware/errorHandler.ts";
 import routes from "./routes/index.ts";
 
@@ -13,7 +14,23 @@ app.use((_req, res) => {
 app.use(errorHandler);
 
 export function startServer() {
-  app.listen(PORT, () => {
+  const server = app.listen(PORT, () => {
     console.log(`Server is running on http://localhost:${PORT}`);
   });
+
+  const shutdown = async () => {
+    try {
+      await new Promise<void>((resolve, reject) =>
+        server.close((err) => (err ? reject(err) : resolve())),
+      );
+      await prisma.$disconnect();
+      process.exit(0);
+    } catch (error) {
+      console.error(error);
+      process.exit(1);
+    }
+  };
+
+  process.on("SIGINT", shutdown);
+  process.on("SIGTERM", shutdown);
 }
