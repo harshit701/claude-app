@@ -25,8 +25,14 @@ function isTaskNotFound(error: unknown): boolean {
   );
 }
 
-export async function findAll(client: PrismaClient = prisma): Promise<Task[]> {
-  const rows = await client.task.findMany({ orderBy: { createdAt: "asc" } });
+export async function findAll(
+  completed?: boolean,
+  client: PrismaClient = prisma,
+): Promise<Task[]> {
+  const rows = await client.task.findMany({
+    where: completed === undefined ? undefined : { completed },
+    orderBy: { createdAt: "asc" },
+  });
   return rows.map(toTask);
 }
 

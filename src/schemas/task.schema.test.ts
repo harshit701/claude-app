@@ -1,6 +1,6 @@
 import { describe, it } from "node:test";
 import assert from "node:assert/strict";
-import { createTaskSchema, updateTaskSchema } from "./task.schema.ts";
+import { createTaskSchema, taskQuerySchema, updateTaskSchema } from "./task.schema.ts";
 
 function validate(input: unknown) {
   return createTaskSchema.validate(input, {
@@ -11,6 +11,13 @@ function validate(input: unknown) {
 
 function validateUpdate(input: unknown) {
   return updateTaskSchema.validate(input, {
+    abortEarly: false,
+    stripUnknown: true,
+  });
+}
+
+function validateQuery(input: unknown) {
+  return taskQuerySchema.validate(input, {
     abortEarly: false,
     stripUnknown: true,
   });
@@ -163,5 +170,41 @@ describe("updateTaskSchema", () => {
 
     assert.equal(result.error, undefined);
     assert.equal("updatedAt" in result.value, false);
+  });
+});
+
+describe("taskQuerySchema", () => {
+  it("accepts an empty query (no filter)", () => {
+    const result = validateQuery({});
+
+    assert.equal(result.error, undefined);
+    assert.equal(result.value.completed, undefined);
+  });
+
+  it("accepts and converts completed=true", () => {
+    const result = validateQuery({ completed: "true" });
+
+    assert.equal(result.error, undefined);
+    assert.equal(result.value.completed, true);
+  });
+
+  it("accepts and converts completed=false", () => {
+    const result = validateQuery({ completed: "false" });
+
+    assert.equal(result.error, undefined);
+    assert.equal(result.value.completed, false);
+  });
+
+  it("rejects an invalid completed value", () => {
+    const result = validateQuery({ completed: "not-a-boolean" });
+
+    assert.ok(result.error);
+  });
+
+  it("strips unknown query parameters", () => {
+    const result = validateQuery({ sort: "asc" });
+
+    assert.equal(result.error, undefined);
+    assert.equal("sort" in result.value, false);
   });
 });

@@ -19,9 +19,10 @@ export async function createTask(
 }
 
 export async function getAllTasks(
+  completed?: boolean,
   repository: TaskRepository = taskRepository,
 ): Promise<Task[]> {
-  return repository.findAll();
+  return repository.findAll(completed);
 }
 
 export async function getTaskById(

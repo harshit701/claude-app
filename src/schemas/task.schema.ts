@@ -11,3 +11,7 @@ export const updateTaskSchema = Joi.object({
   description: Joi.string().trim().optional(),
   completed: Joi.boolean().optional(),
 });
+
+export const taskQuerySchema = Joi.object({
+  completed: Joi.boolean().optional(),
+});

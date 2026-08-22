@@ -28,7 +28,8 @@ function createFakeRepository(initialTasks: Task[] = []) {
       saved.push(task);
       return task;
     },
-    findAll: async () => saved,
+    findAll: async (completed?: boolean) =>
+      completed === undefined ? saved : saved.filter((task) => task.completed === completed),
     findById: async (id: string) => saved.find((task) => task.id === id),
     update: async (id: string, updates: Partial<Pick<Task, "title" | "description" | "completed">>) => {
       const index = saved.findIndex((task) => task.id === id);
@@ -106,13 +107,33 @@ describe("createTask", () => {
 });
 
 describe("getAllTasks", () => {
-  it("returns all tasks from the repository", async () => {
+  it("returns all tasks from the repository when no filter is given", async () => {
     const task = buildTask();
     const repository = createFakeRepository([task]);
 
-    const tasks = await getAllTasks(repository);
+    const tasks = await getAllTasks(undefined, repository);
 
     assert.deepEqual(tasks, [task]);
+  });
+
+  it("returns only completed tasks when filtering by completed: true", async () => {
+    const done = buildTask({ id: "1", completed: true });
+    const pending = buildTask({ id: "2", completed: false });
+    const repository = createFakeRepository([done, pending]);
+
+    const tasks = await getAllTasks(true, repository);
+
+    assert.deepEqual(tasks, [done]);
+  });
+
+  it("returns only incomplete tasks when filtering by completed: false", async () => {
+    const done = buildTask({ id: "1", completed: true });
+    const pending = buildTask({ id: "2", completed: false });
+    const repository = createFakeRepository([done, pending]);
+
+    const tasks = await getAllTasks(false, repository);
+
+    assert.deepEqual(tasks, [pending]);
   });
 });
 
