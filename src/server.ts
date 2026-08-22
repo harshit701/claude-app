@@ -19,9 +19,16 @@ export function startServer() {
   });
 
   const shutdown = async () => {
-    server.close();
-    await prisma.$disconnect();
-    process.exit(0);
+    try {
+      await new Promise<void>((resolve, reject) =>
+        server.close((err) => (err ? reject(err) : resolve())),
+      );
+      await prisma.$disconnect();
+      process.exit(0);
+    } catch (error) {
+      console.error(error);
+      process.exit(1);
+    }
   };
 
   process.on("SIGINT", shutdown);
