@@ -23,12 +23,14 @@ export async function postTask(
 }
 
 export async function getTasks(
-  _req: Request,
+  req: Request,
   res: Response,
   next: NextFunction,
 ) {
   try {
-    const tasks = await getAllTasks();
+    // Safe only because validateQuery(taskQuerySchema) already coerced this to a boolean.
+    const completed = req.query.completed as boolean | undefined;
+    const tasks = await getAllTasks(completed);
     sendSuccess(res, 200, "Tasks retrieved successfully", tasks);
   } catch (error) {
     next(error);

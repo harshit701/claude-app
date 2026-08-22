@@ -58,7 +58,7 @@ describe("task.repository", () => {
         findMany: async () => [buildRow({ id: "1" }), buildRow({ id: "2", title: "Second" })],
       });
 
-      const tasks = await findAll(client);
+      const tasks = await findAll(undefined, client);
 
       assert.equal(tasks.length, 2);
       assert.equal(tasks[0].id, "1");
@@ -71,9 +71,58 @@ describe("task.repository", () => {
         findMany: async () => [buildRow({ description: null })],
       });
 
-      const [task] = await findAll(client);
+      const [task] = await findAll(undefined, client);
 
       assert.equal(task.description, undefined);
+    });
+
+    it("queries without a where clause when no filter is given", async () => {
+      let receivedArgs: unknown;
+      const client = createFakeClient({
+        findMany: async (args: unknown) => {
+          receivedArgs = args;
+          return [];
+        },
+      });
+
+      await findAll(undefined, client);
+
+      assert.deepEqual(receivedArgs, { where: undefined, orderBy: { createdAt: "asc" } });
+    });
+
+    it("filters by completed: true", async () => {
+      let receivedArgs: unknown;
+      const client = createFakeClient({
+        findMany: async (args: unknown) => {
+          receivedArgs = args;
+          return [buildRow({ id: "1", completed: true })];
+        },
+      });
+
+      const tasks = await findAll(true, client);
+
+      assert.deepEqual(receivedArgs, {
+        where: { completed: true },
+        orderBy: { createdAt: "asc" },
+      });
+      assert.equal(tasks[0].completed, true);
+    });
+
+    it("filters by completed: false", async () => {
+      let receivedArgs: unknown;
+      const client = createFakeClient({
+        findMany: async (args: unknown) => {
+          receivedArgs = args;
+          return [buildRow({ id: "1", completed: false })];
+        },
+      });
+
+      await findAll(false, client);
+
+      assert.deepEqual(receivedArgs, {
+        where: { completed: false },
+        orderBy: { createdAt: "asc" },
+      });
     });
   });
 

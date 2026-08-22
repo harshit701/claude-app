@@ -12,7 +12,7 @@ const serviceMock = {
   createTask: async (_input: unknown): Promise<unknown> => {
     throw new Error("createTask not stubbed for this test");
   },
-  getAllTasks: async (): Promise<unknown> => {
+  getAllTasks: async (_completed?: boolean): Promise<unknown> => {
     throw new Error("getAllTasks not stubbed for this test");
   },
   getTaskById: async (_id: string): Promise<unknown> => {
@@ -29,7 +29,7 @@ const serviceMock = {
 mock.module("../services/task.service.ts", {
   namedExports: {
     createTask: (input: unknown) => serviceMock.createTask(input),
-    getAllTasks: () => serviceMock.getAllTasks(),
+    getAllTasks: (completed?: boolean) => serviceMock.getAllTasks(completed),
     getTaskById: (id: string) => serviceMock.getTaskById(id),
     updateTask: (id: string, input: unknown) => serviceMock.updateTask(id, input),
     deleteTask: (id: string) => serviceMock.deleteTask(id),
@@ -103,14 +103,54 @@ describe("task.controller", () => {
   });
 
   describe("getTasks", () => {
-    it("responds with 200 and the list of tasks", async () => {
+    it("responds with 200 and the list of tasks when no filter is given", async () => {
       const tasks = [{ id: "1", title: "Buy milk", completed: false }];
-      serviceMock.getAllTasks = async () => tasks;
+      serviceMock.getAllTasks = async (completed) => {
+        assert.equal(completed, undefined);
+        return tasks;
+      };
 
       const { res, calls } = createFakeRes();
       const { next, errors } = createFakeNext();
+      const req = { query: {} } as unknown as Request;
 
-      await getTasks({} as Request, res, next);
+      await getTasks(req, res, next);
+
+      assert.equal(calls.statusCode, 200);
+      assert.deepEqual(calls.body, { message: "Tasks retrieved successfully", data: tasks });
+      assert.equal(errors.length, 0);
+    });
+
+    it("passes completed: true through to the service", async () => {
+      const tasks = [{ id: "1", title: "Buy milk", completed: true }];
+      serviceMock.getAllTasks = async (completed) => {
+        assert.equal(completed, true);
+        return tasks;
+      };
+
+      const { res, calls } = createFakeRes();
+      const { next, errors } = createFakeNext();
+      const req = { query: { completed: true } } as unknown as Request;
+
+      await getTasks(req, res, next);
+
+      assert.equal(calls.statusCode, 200);
+      assert.deepEqual(calls.body, { message: "Tasks retrieved successfully", data: tasks });
+      assert.equal(errors.length, 0);
+    });
+
+    it("passes completed: false through to the service (not treated as absent)", async () => {
+      const tasks = [{ id: "1", title: "Buy milk", completed: false }];
+      serviceMock.getAllTasks = async (completed) => {
+        assert.equal(completed, false);
+        return tasks;
+      };
+
+      const { res, calls } = createFakeRes();
+      const { next, errors } = createFakeNext();
+      const req = { query: { completed: false } } as unknown as Request;
+
+      await getTasks(req, res, next);
 
       assert.equal(calls.statusCode, 200);
       assert.deepEqual(calls.body, { message: "Tasks retrieved successfully", data: tasks });
