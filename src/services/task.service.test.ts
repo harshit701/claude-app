@@ -12,20 +12,30 @@ import type { Task } from "../types/task.types.ts";
 
 function createFakeRepository(initialTasks: Task[] = []) {
   const saved: Task[] = [...initialTasks];
+  let nextId = saved.length + 1;
   return {
     saved,
-    create: async (task: Task) => {
+    create: async (input: Pick<Task, "title" | "description" | "completed">) => {
+      const now = new Date().toISOString();
+      const task: Task = {
+        id: String(nextId++),
+        title: input.title,
+        description: input.description,
+        completed: input.completed,
+        createdAt: now,
+        updatedAt: now,
+      };
       saved.push(task);
       return task;
     },
     findAll: async () => saved,
     findById: async (id: string) => saved.find((task) => task.id === id),
-    update: async (id: string, updates: Partial<Task>) => {
+    update: async (id: string, updates: Partial<Pick<Task, "title" | "description" | "completed">>) => {
       const index = saved.findIndex((task) => task.id === id);
       if (index === -1) {
         return undefined;
       }
-      saved[index] = { ...saved[index], ...updates };
+      saved[index] = { ...saved[index], ...updates, updatedAt: new Date().toISOString() };
       return saved[index];
     },
     remove: async (id: string) => {

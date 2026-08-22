@@ -1,4 +1,3 @@
-import { randomUUID } from "node:crypto";
 import * as taskRepository from "../repositories/task.repository.ts";
 import type { CreateTaskInput, Task, UpdateTaskInput } from "../types/task.types.ts";
 import { NotFoundError } from "../utils/errors.ts";
@@ -12,18 +11,11 @@ export async function createTask(
   input: CreateTaskInput,
   repository: TaskRepository = taskRepository,
 ): Promise<Task> {
-  const now = new Date().toISOString();
-
-  const task: Task = {
-    id: randomUUID(),
+  return repository.create({
     title: input.title,
     description: input.description,
     completed: input.completed ?? false,
-    createdAt: now,
-    updatedAt: now,
-  };
-
-  return repository.create(task);
+  });
 }
 
 export async function getAllTasks(
@@ -50,12 +42,7 @@ export async function updateTask(
   input: UpdateTaskInput,
   repository: TaskRepository = taskRepository,
 ): Promise<Task> {
-  const updates: Partial<Task> = {
-    ...input,
-    updatedAt: new Date().toISOString(),
-  };
-
-  const task = await repository.update(id, updates);
+  const task = await repository.update(id, input);
 
   if (!task) {
     throw new NotFoundError(`Task with id ${id} not found`);
