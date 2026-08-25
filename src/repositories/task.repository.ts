@@ -1,4 +1,8 @@
-import { Prisma, type PrismaClient, type Task as TaskRow } from "@prisma/client";
+import {
+  Prisma,
+  type PrismaClient,
+  type Task as TaskRow,
+} from "@prisma/client";
 import { prisma } from "../config/database.ts";
 import type { Task } from "../types/task.types.ts";
 
@@ -36,7 +40,10 @@ export async function findAll(
   return rows.map(toTask);
 }
 
-export async function create(task: NewTask, client: PrismaClient = prisma): Promise<Task> {
+export async function create(
+  task: NewTask,
+  client: PrismaClient = prisma,
+): Promise<Task> {
   const row = await client.task.create({ data: task });
   return toTask(row);
 }
@@ -72,7 +79,10 @@ export async function update(
   }
 }
 
-export async function remove(id: string, client: PrismaClient = prisma): Promise<boolean> {
+export async function remove(
+  id: string,
+  client: PrismaClient = prisma,
+): Promise<boolean> {
   try {
     await client.task.delete({ where: { id } });
     return true;

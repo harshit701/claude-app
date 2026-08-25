@@ -38,9 +38,9 @@ Always re-read `CLAUDE.md` at the start of a feature-development run, not from m
 ## Phase 4 — Review / fix cycle (delegated)
 
 9. Invoke the `backend-code-reviewer` agent (`Agent` tool, `subagent_type: "backend-code-reviewer"`) to review the changes made so far. Give it enough context to review meaningfully (what changed and why — see this project's established pattern of briefing it with concrete file paths and a summary of design decisions, not just "review my changes").
-10. If it reports **Critical or Important** issues: fix them yourself (directly — this is implementation work, not something to hand to another agent), re-run verification (Phase 3, step 8) if the fix touches tested behavior.
+10. If it reports anything under **Critical Issues**, **Architectural Issues**, **Security / Reliability Issues**, or **Must fix**/**Should fix** under **Recommended Changes**: fix them yourself (directly — this is implementation work, not something to hand to another agent), re-run verification (Phase 3, step 8) if the fix touches tested behavior. (These are the reviewer's actual output headers — see `backend-code-reviewer`'s output format. It does not use the label "Important"; treat the above as the blocking set.)
 11. Invoke the `backend-code-reviewer` agent again on the updated code.
-12. Repeat steps 10–11 until a review pass reports no Critical or Important issues. Minor issues and Suggestions do not block the cycle — note them for the user, but don't loop on them indefinitely.
+12. Repeat steps 10–11 until a review pass reports nothing under those headers. Items under **Code Quality Issues**, **Testing Issues**, or **Nice to have** do not block the cycle — note them for the user, but don't loop on them indefinitely.
 
 ## Phase 5 — Local commit (delegated)
 
@@ -59,13 +59,13 @@ This phase follows the same delegation rule as Phase 4: you do not perform code-
 
 18. Use GitHub MCP to inspect the PR's full context: `pull_request_read` (method `get`) for the PR itself, `get_commits` for its commits, `get_files` for changed files, `get_comments`/`get_review_comments` for any existing discussion, and `get_diff` for the actual diff.
 19. Invoke the `backend-code-reviewer` agent (`Agent` tool, `subagent_type: "backend-code-reviewer"`) to perform the actual review, briefing it with that PR context (what the PR changes, why, and the diff/file list from step 18) — the same level of concrete briefing established in Phase 4 and in this project's prior reviews.
-20. If it reports **Critical or Important** issues:
+20. If it reports anything under **Critical Issues**, **Architectural Issues**, **Security / Reliability Issues**, or **Must fix**/**Should fix** under **Recommended Changes** (same blocking set as Phase 4, step 10):
     - Fix them directly (this is implementation work — you do the fix, not the reviewer agent).
     - Run relevant verification (typecheck, test suite, and a manual/live check where applicable — same as Phase 3 step 8) for every fix, **before** invoking `git-commit`. Do not commit an unverified fix.
     - Invoke the `git-commit` skill (`Skill` tool, `skill: "git-commit"`) to commit the fix — never stage/commit outside it.
     - Push the new commit (`git push`).
     - Re-invoke the `backend-code-reviewer` agent against the updated PR (repeat steps 18–19 with the refreshed diff/commit list).
-21. Repeat step 20 until a review pass reports no Critical or Important issues. Minor issues and Suggestions do not block the cycle — note them for the user, but don't loop on them indefinitely.
+21. Repeat step 20 until a review pass reports nothing under those headers. Items under **Code Quality Issues**, **Testing Issues**, or **Nice to have** do not block the cycle — note them for the user, but don't loop on them indefinitely.
 
 ## Phase 8 — STOP for human approval
 

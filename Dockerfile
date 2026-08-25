@@ -21,7 +21,15 @@ COPY prisma ./prisma
 
 # npm ci triggers the "postinstall" script (prisma generate), so the Prisma
 # schema must already be present (copied above) before this runs.
-RUN npm ci
+#
+# "typescript" and "prisma" are devDependencies, but package-lock.json marks
+# them "devOptional" (each is an optional peer dependency of the other /
+# @prisma/client), so `npm prune --omit=dev` does not remove them — verified
+# empirically, prune reported them untouched. Removing their directories
+# directly is safe: prisma generate has already produced the runtime client
+# under node_modules/@prisma/client, and nothing at runtime imports the
+# "prisma" CLI or "typescript" packages themselves.
+RUN npm ci && rm -rf node_modules/typescript node_modules/prisma
 
 # --chown avoids a separate "RUN chown -R" step, which would otherwise force
 # a full copy-up of the already-copied node_modules layer under overlay2.
