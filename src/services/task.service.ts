@@ -1,5 +1,9 @@
 import * as taskRepository from "../repositories/task.repository.ts";
-import type { CreateTaskInput, Task, UpdateTaskInput } from "../types/task.types.ts";
+import type {
+  CreateTaskInput,
+  Task,
+  UpdateTaskInput,
+} from "../types/task.types.ts";
 import { NotFoundError } from "../utils/errors.ts";
 
 type TaskRepository = Pick<
@@ -32,7 +36,7 @@ export async function getTaskById(
   const task = await repository.findById(id);
 
   if (!task) {
-    throw new NotFoundError(`Task with id ${id} not found`);
+    throw new NotFoundError(`Task not found`);
   }
 
   return task;
@@ -46,7 +50,7 @@ export async function updateTask(
   const task = await repository.update(id, input);
 
   if (!task) {
-    throw new NotFoundError(`Task with id ${id} not found`);
+    throw new NotFoundError(`Task not found`);
   }
 
   return task;
@@ -59,6 +63,6 @@ export async function deleteTask(
   const deleted = await repository.remove(id);
 
   if (!deleted) {
-    throw new NotFoundError(`Task with id ${id} not found`);
+    throw new NotFoundError(`Task not found`);
   }
 }
