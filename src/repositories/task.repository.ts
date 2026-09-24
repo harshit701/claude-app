@@ -4,10 +4,12 @@ import {
   type Task as TaskRow,
 } from "@prisma/client";
 import { prisma } from "../config/database.ts";
-import type { Task } from "../types/task.types.ts";
+import type { Priority, Task } from "../types/task.types.ts";
 
-type NewTask = Pick<Task, "title" | "description" | "completed">;
-type TaskUpdate = Partial<Pick<Task, "title" | "description" | "completed">>;
+type NewTask = Pick<Task, "title" | "description" | "completed" | "priority">;
+type TaskUpdate = Partial<
+  Pick<Task, "title" | "description" | "completed" | "priority">
+>;
 
 function toTask(row: TaskRow): Task {
   return {
@@ -15,6 +17,7 @@ function toTask(row: TaskRow): Task {
     title: row.title,
     description: row.description ?? undefined,
     completed: row.completed,
+    priority: row.priority,
     createdAt: row.createdAt.toISOString(),
     updatedAt: row.updatedAt.toISOString(),
   };
@@ -32,9 +35,14 @@ function isTaskNotFound(error: unknown): boolean {
 export async function findAll(
   completed?: boolean,
   client: PrismaClient = prisma,
+  priority?: Priority,
 ): Promise<Task[]> {
+  const where = {
+    ...(completed === undefined ? {} : { completed }),
+    ...(priority === undefined ? {} : { priority }),
+  };
   const rows = await client.task.findMany({
-    where: completed === undefined ? undefined : { completed },
+    where: Object.keys(where).length === 0 ? undefined : where,
     orderBy: { createdAt: "asc" },
   });
   return rows.map(toTask);

@@ -7,6 +7,12 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
+enum Priority {
+  low
+  medium
+  high
+}
+
 model Task {
   // gen_random_uuid() is built into Postgres core as of version 13 — no
   // pgcrypto extension needed on 13+, but older Postgres instances will fail.
@@ -14,6 +20,7 @@ model Task {
   title       String
   description String?
   completed   Boolean  @default(false)
+  priority    Priority @default(medium)
   createdAt   DateTime @default(now()) @map("created_at")
   updatedAt   DateTime @updatedAt @map("updated_at")
 

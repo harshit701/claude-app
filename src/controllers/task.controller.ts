@@ -6,7 +6,11 @@ import {
   getTaskById,
   updateTask,
 } from "../services/task.service.ts";
-import type { CreateTaskInput, UpdateTaskInput } from "../types/task.types.ts";
+import type {
+  CreateTaskInput,
+  Priority,
+  UpdateTaskInput,
+} from "../types/task.types.ts";
 import { sendSuccess } from "../utils/response.ts";
 
 export async function postTask(
@@ -28,9 +32,10 @@ export async function getTasks(
   next: NextFunction,
 ) {
   try {
-    // Safe only because validateQuery(taskQuerySchema) already coerced this to a boolean.
+    // Safe only because validateQuery(taskQuerySchema) already validated these.
     const completed = req.query.completed as boolean | undefined;
-    const tasks = await getAllTasks(completed);
+    const priority = req.query.priority as Priority | undefined;
+    const tasks = await getAllTasks(completed, undefined, priority);
     sendSuccess(res, 200, "Tasks retrieved successfully", tasks);
   } catch (error) {
     next(error);

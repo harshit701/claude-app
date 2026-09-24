@@ -1,6 +1,7 @@
 import * as taskRepository from "../repositories/task.repository.ts";
 import type {
   CreateTaskInput,
+  Priority,
   Task,
   UpdateTaskInput,
 } from "../types/task.types.ts";
@@ -19,14 +20,16 @@ export async function createTask(
     title: input.title,
     description: input.description,
     completed: input.completed ?? false,
+    priority: input.priority ?? "medium",
   });
 }
 
 export async function getAllTasks(
   completed?: boolean,
   repository: TaskRepository = taskRepository,
+  priority?: Priority,
 ): Promise<Task[]> {
-  return repository.findAll(completed);
+  return repository.findAll(completed, undefined, priority);
 }
 
 export async function getTaskById(
