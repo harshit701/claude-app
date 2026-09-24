@@ -15,23 +15,31 @@ function createFakeRepository(initialTasks: Task[] = []) {
   let nextId = saved.length + 1;
   return {
     saved,
-    create: async (input: Pick<Task, "title" | "description" | "completed">) => {
+    create: async (
+      input: Pick<Task, "title" | "description" | "completed" | "priority">,
+    ) => {
       const now = new Date().toISOString();
       const task: Task = {
         id: String(nextId++),
         title: input.title,
         description: input.description,
         completed: input.completed,
+        priority: input.priority,
         createdAt: now,
         updatedAt: now,
       };
       saved.push(task);
       return task;
     },
-    findAll: async (completed?: boolean) =>
-      completed === undefined ? saved : saved.filter((task) => task.completed === completed),
+    findAll: async (completed?: boolean, _client?: unknown, priority?: Task["priority"]) =>
+      saved
+        .filter((task) => completed === undefined || task.completed === completed)
+        .filter((task) => priority === undefined || task.priority === priority),
     findById: async (id: string) => saved.find((task) => task.id === id),
-    update: async (id: string, updates: Partial<Pick<Task, "title" | "description" | "completed">>) => {
+    update: async (
+      id: string,
+      updates: Partial<Pick<Task, "title" | "description" | "completed" | "priority">>,
+    ) => {
       const index = saved.findIndex((task) => task.id === id);
       if (index === -1) {
         return undefined;
@@ -55,6 +63,7 @@ function buildTask(overrides: Partial<Task> = {}): Task {
     id: "1",
     title: "Buy milk",
     completed: false,
+    priority: "medium",
     createdAt: "2026-01-01T00:00:00.000Z",
     updatedAt: "2026-01-01T00:00:00.000Z",
     ...overrides,
@@ -76,6 +85,22 @@ describe("createTask", () => {
     const task = await createTask({ title: "Buy milk", completed: true }, repository);
 
     assert.equal(task.completed, true);
+  });
+
+  it("defaults priority to medium when omitted", async () => {
+    const repository = createFakeRepository();
+
+    const task = await createTask({ title: "Buy milk" }, repository);
+
+    assert.equal(task.priority, "medium");
+  });
+
+  it("keeps priority as provided when given", async () => {
+    const repository = createFakeRepository();
+
+    const task = await createTask({ title: "Buy milk", priority: "high" }, repository);
+
+    assert.equal(task.priority, "high");
   });
 
   it("generates an id server-side", async () => {
@@ -134,6 +159,16 @@ describe("getAllTasks", () => {
     const tasks = await getAllTasks(false, repository);
 
     assert.deepEqual(tasks, [pending]);
+  });
+
+  it("returns only tasks matching the given priority", async () => {
+    const high = buildTask({ id: "1", priority: "high" });
+    const low = buildTask({ id: "2", priority: "low" });
+    const repository = createFakeRepository([high, low]);
+
+    const tasks = await getAllTasks(undefined, repository, "high");
+
+    assert.deepEqual(tasks, [high]);
   });
 });
 

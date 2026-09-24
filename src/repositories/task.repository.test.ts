@@ -11,6 +11,7 @@ function buildRow(overrides: Partial<Record<string, unknown>> = {}) {
     title: "Buy milk",
     description: null,
     completed: false,
+    priority: "medium",
     createdAt: NOW,
     updatedAt: NOW,
     ...overrides,
@@ -76,6 +77,16 @@ describe("task.repository", () => {
       assert.equal(task.description, undefined);
     });
 
+    it("maps the priority column", async () => {
+      const client = createFakeClient({
+        findMany: async () => [buildRow({ priority: "high" })],
+      });
+
+      const [task] = await findAll(undefined, client);
+
+      assert.equal(task.priority, "high");
+    });
+
     it("queries without a where clause when no filter is given", async () => {
       let receivedArgs: unknown;
       const client = createFakeClient({
@@ -124,6 +135,41 @@ describe("task.repository", () => {
         orderBy: { createdAt: "asc" },
       });
     });
+
+    it("filters by priority", async () => {
+      let receivedArgs: unknown;
+      const client = createFakeClient({
+        findMany: async (args: unknown) => {
+          receivedArgs = args;
+          return [buildRow({ id: "1", priority: "high" })];
+        },
+      });
+
+      const tasks = await findAll(undefined, client, "high");
+
+      assert.deepEqual(receivedArgs, {
+        where: { priority: "high" },
+        orderBy: { createdAt: "asc" },
+      });
+      assert.equal(tasks[0].priority, "high");
+    });
+
+    it("filters by completed and priority together", async () => {
+      let receivedArgs: unknown;
+      const client = createFakeClient({
+        findMany: async (args: unknown) => {
+          receivedArgs = args;
+          return [];
+        },
+      });
+
+      await findAll(true, client, "low");
+
+      assert.deepEqual(receivedArgs, {
+        where: { completed: true, priority: "low" },
+        orderBy: { createdAt: "asc" },
+      });
+    });
   });
 
   describe("create", () => {
@@ -136,11 +182,20 @@ describe("task.repository", () => {
         },
       });
 
-      const task = await create({ title: "Buy milk", description: undefined, completed: false }, client);
+      const task = await create(
+        { title: "Buy milk", description: undefined, completed: false, priority: "medium" },
+        client,
+      );
 
-      assert.deepEqual(receivedData, { title: "Buy milk", description: undefined, completed: false });
+      assert.deepEqual(receivedData, {
+        title: "Buy milk",
+        description: undefined,
+        completed: false,
+        priority: "medium",
+      });
       assert.equal(task.id, "generated-id");
       assert.equal(task.title, "Buy milk");
+      assert.equal(task.priority, "medium");
     });
   });
 
@@ -185,6 +240,21 @@ describe("task.repository", () => {
       const task = await update("1", { title: "Updated" }, client);
 
       assert.equal(task?.title, "Updated");
+    });
+
+    it("passes priority through to Prisma and returns the updated task", async () => {
+      let receivedData: unknown;
+      const client = createFakeClient({
+        update: async ({ data }: { data: unknown }) => {
+          receivedData = data;
+          return buildRow({ id: "1", priority: "low" });
+        },
+      });
+
+      const task = await update("1", { priority: "low" }, client);
+
+      assert.deepEqual(receivedData, { priority: "low" });
+      assert.equal(task?.priority, "low");
     });
 
     it("returns undefined when the task does not exist", async () => {
