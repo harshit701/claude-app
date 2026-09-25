@@ -38,17 +38,6 @@ export interface UpdateTaskInput {
   categoryIds?: string[];
 }
 
-export interface TaskFilters {
-  completed?: boolean;
-  priority?: Priority;
-  categoryId?: string;
-}
-
-export interface TaskSort {
-  sortBy?: SortableField;
-  order?: SortOrder;
-}
-
 export interface TaskPage {
   tasks: Task[];
   nextCursor: string | null;
