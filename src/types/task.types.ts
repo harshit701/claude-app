@@ -1,4 +1,9 @@
+import type { Category } from "./category.types.ts";
+
 export type Priority = "low" | "medium" | "high";
+
+export type SortableField = "createdAt" | "dueDate" | "priority" | "completed";
+export type SortOrder = "asc" | "desc";
 
 export interface Task {
   id: string;
@@ -6,6 +11,11 @@ export interface Task {
   description?: string;
   completed: boolean;
   priority: Priority;
+  dueDate?: string;
+  // Computed on read from `dueDate`; never persisted (see task.service.ts).
+  // undefined when the task has no dueDate, negative when overdue.
+  daysRemaining?: number;
+  categories: Category[];
   createdAt: string;
   updatedAt: string;
 }
@@ -15,6 +25,8 @@ export interface CreateTaskInput {
   description?: string;
   completed?: boolean;
   priority?: Priority;
+  dueDate?: string;
+  categoryIds?: string[];
 }
 
 export interface UpdateTaskInput {
@@ -22,4 +34,22 @@ export interface UpdateTaskInput {
   description?: string;
   completed?: boolean;
   priority?: Priority;
+  dueDate?: string;
+  categoryIds?: string[];
+}
+
+export interface TaskFilters {
+  completed?: boolean;
+  priority?: Priority;
+  categoryId?: string;
+}
+
+export interface TaskSort {
+  sortBy?: SortableField;
+  order?: SortOrder;
+}
+
+export interface TaskPage {
+  tasks: Task[];
+  nextCursor: string | null;
 }

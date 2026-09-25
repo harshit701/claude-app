@@ -12,7 +12,7 @@ const serviceMock = {
   createTask: async (_input: unknown): Promise<unknown> => {
     throw new Error("createTask not stubbed for this test");
   },
-  getAllTasks: async (_completed?: boolean): Promise<unknown> => {
+  getAllTasks: async (_options?: any): Promise<unknown> => {
     throw new Error("getAllTasks not stubbed for this test");
   },
   getTaskById: async (_id: string): Promise<unknown> => {
@@ -29,7 +29,7 @@ const serviceMock = {
 mock.module("../services/task.service.ts", {
   namedExports: {
     createTask: (input: unknown) => serviceMock.createTask(input),
-    getAllTasks: (completed?: boolean) => serviceMock.getAllTasks(completed),
+    getAllTasks: (options?: unknown) => serviceMock.getAllTasks(options),
     getTaskById: (id: string) => serviceMock.getTaskById(id),
     updateTask: (id: string, input: unknown) => serviceMock.updateTask(id, input),
     deleteTask: (id: string) => serviceMock.deleteTask(id),
@@ -103,11 +103,11 @@ describe("task.controller", () => {
   });
 
   describe("getTasks", () => {
-    it("responds with 200 and the list of tasks when no filter is given", async () => {
-      const tasks = [{ id: "1", title: "Buy milk", completed: false }];
-      serviceMock.getAllTasks = async (completed) => {
-        assert.equal(completed, undefined);
-        return tasks;
+    it("responds with 200 and the page of tasks when no filter is given", async () => {
+      const page = { tasks: [{ id: "1", title: "Buy milk", completed: false }], nextCursor: null };
+      serviceMock.getAllTasks = async (options) => {
+        assert.deepEqual(options, {});
+        return page;
       };
 
       const { res, calls } = createFakeRes();
@@ -117,15 +117,15 @@ describe("task.controller", () => {
       await getTasks(req, res, next);
 
       assert.equal(calls.statusCode, 200);
-      assert.deepEqual(calls.body, { message: "Tasks retrieved successfully", data: tasks });
+      assert.deepEqual(calls.body, { message: "Tasks retrieved successfully", data: page });
       assert.equal(errors.length, 0);
     });
 
     it("passes completed: true through to the service", async () => {
-      const tasks = [{ id: "1", title: "Buy milk", completed: true }];
-      serviceMock.getAllTasks = async (completed) => {
-        assert.equal(completed, true);
-        return tasks;
+      const page = { tasks: [{ id: "1", title: "Buy milk", completed: true }], nextCursor: null };
+      serviceMock.getAllTasks = async (options: { completed?: boolean }) => {
+        assert.equal(options.completed, true);
+        return page;
       };
 
       const { res, calls } = createFakeRes();
@@ -135,15 +135,15 @@ describe("task.controller", () => {
       await getTasks(req, res, next);
 
       assert.equal(calls.statusCode, 200);
-      assert.deepEqual(calls.body, { message: "Tasks retrieved successfully", data: tasks });
+      assert.deepEqual(calls.body, { message: "Tasks retrieved successfully", data: page });
       assert.equal(errors.length, 0);
     });
 
     it("passes completed: false through to the service (not treated as absent)", async () => {
-      const tasks = [{ id: "1", title: "Buy milk", completed: false }];
-      serviceMock.getAllTasks = async (completed) => {
-        assert.equal(completed, false);
-        return tasks;
+      const page = { tasks: [{ id: "1", title: "Buy milk", completed: false }], nextCursor: null };
+      serviceMock.getAllTasks = async (options: { completed?: boolean }) => {
+        assert.equal(options.completed, false);
+        return page;
       };
 
       const { res, calls } = createFakeRes();
@@ -153,7 +153,33 @@ describe("task.controller", () => {
       await getTasks(req, res, next);
 
       assert.equal(calls.statusCode, 200);
-      assert.deepEqual(calls.body, { message: "Tasks retrieved successfully", data: tasks });
+      assert.deepEqual(calls.body, { message: "Tasks retrieved successfully", data: page });
+      assert.equal(errors.length, 0);
+    });
+
+    it("passes sortBy, order, categoryId, limit, and cursor through to the service", async () => {
+      const page = { tasks: [], nextCursor: null };
+      serviceMock.getAllTasks = async (options: Record<string, unknown>) => {
+        assert.deepEqual(options, {
+          sortBy: "dueDate",
+          order: "desc",
+          categoryId: "cat-1",
+          limit: 5,
+          cursor: "abc",
+        });
+        return page;
+      };
+
+      const { res, calls } = createFakeRes();
+      const { next, errors } = createFakeNext();
+      const req = {
+        query: { sortBy: "dueDate", order: "desc", categoryId: "cat-1", limit: 5, cursor: "abc" },
+      } as unknown as Request;
+
+      await getTasks(req, res, next);
+
+      assert.equal(calls.statusCode, 200);
+      assert.deepEqual(calls.body, { message: "Tasks retrieved successfully", data: page });
       assert.equal(errors.length, 0);
     });
   });
