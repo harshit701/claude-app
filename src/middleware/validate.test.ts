@@ -69,7 +69,7 @@ describe("validateQuery (generic middleware)", () => {
 
     assert.equal(calls.length, 1);
     assert.equal(calls[0], undefined);
-    assert.deepEqual(req.query, { completed: true });
+    assert.equal(req.query.completed, true);
   });
 
   it("calls next() with no error when the query is omitted entirely", () => {

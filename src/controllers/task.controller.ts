@@ -9,6 +9,8 @@ import {
 import type {
   CreateTaskInput,
   Priority,
+  SortableField,
+  SortOrder,
   UpdateTaskInput,
 } from "../types/task.types.ts";
 import { sendSuccess } from "../utils/response.ts";
@@ -33,10 +35,17 @@ export async function getTasks(
 ) {
   try {
     // Safe only because validateQuery(taskQuerySchema) already validated these.
-    const completed = req.query.completed as boolean | undefined;
-    const priority = req.query.priority as Priority | undefined;
-    const tasks = await getAllTasks(completed, undefined, priority);
-    sendSuccess(res, 200, "Tasks retrieved successfully", tasks);
+    const query = req.query as {
+      completed?: boolean;
+      priority?: Priority;
+      categoryId?: string;
+      sortBy?: SortableField;
+      order?: SortOrder;
+      limit?: number;
+      cursor?: string;
+    };
+    const page = await getAllTasks(query);
+    sendSuccess(res, 200, "Tasks retrieved successfully", page);
   } catch (error) {
     next(error);
   }

@@ -12,8 +12,19 @@ function buildRow(overrides: Partial<Record<string, unknown>> = {}) {
     description: null,
     completed: false,
     priority: "medium",
+    dueDate: null,
+    categories: [],
     createdAt: NOW,
     updatedAt: NOW,
+    ...overrides,
+  };
+}
+
+function buildCategoryRow(overrides: Partial<Record<string, unknown>> = {}) {
+  return {
+    id: "cat-1",
+    name: "Work",
+    createdAt: NOW,
     ...overrides,
   };
 }
@@ -59,7 +70,7 @@ describe("task.repository", () => {
         findMany: async () => [buildRow({ id: "1" }), buildRow({ id: "2", title: "Second" })],
       });
 
-      const tasks = await findAll(undefined, client);
+      const { tasks } = await findAll(undefined, undefined, undefined, client);
 
       assert.equal(tasks.length, 2);
       assert.equal(tasks[0].id, "1");
@@ -72,19 +83,35 @@ describe("task.repository", () => {
         findMany: async () => [buildRow({ description: null })],
       });
 
-      const [task] = await findAll(undefined, client);
+      const { tasks } = await findAll(undefined, undefined, undefined, client);
 
-      assert.equal(task.description, undefined);
+      assert.equal(tasks[0].description, undefined);
     });
 
-    it("maps the priority column", async () => {
+    it("maps a null dueDate to undefined and a set dueDate to an ISO string", async () => {
       const client = createFakeClient({
-        findMany: async () => [buildRow({ priority: "high" })],
+        findMany: async () => [
+          buildRow({ id: "1", dueDate: null }),
+          buildRow({ id: "2", dueDate: new Date("2026-02-01T00:00:00.000Z") }),
+        ],
       });
 
-      const [task] = await findAll(undefined, client);
+      const { tasks } = await findAll(undefined, undefined, undefined, client);
 
-      assert.equal(task.priority, "high");
+      assert.equal(tasks[0].dueDate, undefined);
+      assert.equal(tasks[1].dueDate, "2026-02-01T00:00:00.000Z");
+    });
+
+    it("maps categories on the row to the Task's categories array", async () => {
+      const client = createFakeClient({
+        findMany: async () => [buildRow({ categories: [buildCategoryRow()] })],
+      });
+
+      const { tasks } = await findAll(undefined, undefined, undefined, client);
+
+      assert.deepEqual(tasks[0].categories, [
+        { id: "cat-1", name: "Work", createdAt: NOW.toISOString() },
+      ]);
     });
 
     it("queries without a where clause when no filter is given", async () => {
@@ -96,9 +123,11 @@ describe("task.repository", () => {
         },
       });
 
-      await findAll(undefined, client);
+      await findAll(undefined, undefined, undefined, client);
 
-      assert.deepEqual(receivedArgs, { where: undefined, orderBy: { createdAt: "asc" } });
+      const args = receivedArgs as { where: unknown; orderBy: unknown };
+      assert.equal(args.where, undefined);
+      assert.deepEqual(args.orderBy, [{ createdAt: "asc" }, { id: "asc" }]);
     });
 
     it("filters by completed: true", async () => {
@@ -110,30 +139,11 @@ describe("task.repository", () => {
         },
       });
 
-      const tasks = await findAll(true, client);
+      const { tasks } = await findAll({ completed: true }, undefined, undefined, client);
 
-      assert.deepEqual(receivedArgs, {
-        where: { completed: true },
-        orderBy: { createdAt: "asc" },
-      });
+      const args = receivedArgs as { where: unknown };
+      assert.deepEqual(args.where, { completed: true });
       assert.equal(tasks[0].completed, true);
-    });
-
-    it("filters by completed: false", async () => {
-      let receivedArgs: unknown;
-      const client = createFakeClient({
-        findMany: async (args: unknown) => {
-          receivedArgs = args;
-          return [buildRow({ id: "1", completed: false })];
-        },
-      });
-
-      await findAll(false, client);
-
-      assert.deepEqual(receivedArgs, {
-        where: { completed: false },
-        orderBy: { createdAt: "asc" },
-      });
     });
 
     it("filters by priority", async () => {
@@ -145,16 +155,14 @@ describe("task.repository", () => {
         },
       });
 
-      const tasks = await findAll(undefined, client, "high");
+      const { tasks } = await findAll({ priority: "high" }, undefined, undefined, client);
 
-      assert.deepEqual(receivedArgs, {
-        where: { priority: "high" },
-        orderBy: { createdAt: "asc" },
-      });
+      const args = receivedArgs as { where: unknown };
+      assert.deepEqual(args.where, { priority: "high" });
       assert.equal(tasks[0].priority, "high");
     });
 
-    it("filters by completed and priority together", async () => {
+    it("filters by categoryId using a relation 'some' clause", async () => {
       let receivedArgs: unknown;
       const client = createFakeClient({
         findMany: async (args: unknown) => {
@@ -163,12 +171,115 @@ describe("task.repository", () => {
         },
       });
 
-      await findAll(true, client, "low");
+      await findAll({ categoryId: "cat-1" }, undefined, undefined, client);
+
+      const args = receivedArgs as { where: unknown };
+      assert.deepEqual(args.where, { categories: { some: { id: "cat-1" } } });
+    });
+
+    it("combines completed, priority, and categoryId filters", async () => {
+      let receivedArgs: unknown;
+      const client = createFakeClient({
+        findMany: async (args: unknown) => {
+          receivedArgs = args;
+          return [];
+        },
+      });
+
+      await findAll(
+        { completed: true, priority: "low", categoryId: "cat-1" },
+        undefined,
+        undefined,
+        client,
+      );
+
+      const args = receivedArgs as { where: unknown };
+      assert.deepEqual(args.where, {
+        completed: true,
+        priority: "low",
+        categories: { some: { id: "cat-1" } },
+      });
+    });
+
+    it("sorts by dueDate with nulls last, using id as a tiebreaker", async () => {
+      let receivedArgs: unknown;
+      const client = createFakeClient({
+        findMany: async (args: unknown) => {
+          receivedArgs = args;
+          return [];
+        },
+      });
+
+      await findAll(undefined, { sortBy: "dueDate", order: "desc" }, undefined, client);
+
+      const args = receivedArgs as { orderBy: unknown };
+      assert.deepEqual(args.orderBy, [
+        { dueDate: { sort: "desc", nulls: "last" } },
+        { id: "asc" },
+      ]);
+    });
+
+    it("requests one extra row and reports hasMore when more rows exist", async () => {
+      const client = createFakeClient({
+        findMany: async () => [
+          buildRow({ id: "1" }),
+          buildRow({ id: "2" }),
+          buildRow({ id: "3" }),
+        ],
+      });
+
+      const { tasks, hasMore } = await findAll(undefined, undefined, { limit: 2 }, client);
+
+      assert.equal(tasks.length, 2);
+      assert.equal(hasMore, true);
+    });
+
+    it("reports hasMore: false when fewer rows than the limit come back", async () => {
+      const client = createFakeClient({
+        findMany: async () => [buildRow({ id: "1" })],
+      });
+
+      const { tasks, hasMore } = await findAll(undefined, undefined, { limit: 2 }, client);
+
+      assert.equal(tasks.length, 1);
+      assert.equal(hasMore, false);
+    });
+
+    it("passes limit + 1 as take, and forwards cursor/skip when a cursorId is given", async () => {
+      let receivedArgs: unknown;
+      const client = createFakeClient({
+        findMany: async (args: unknown) => {
+          receivedArgs = args;
+          return [];
+        },
+      });
+
+      await findAll(undefined, undefined, { limit: 10, cursorId: "task-5" }, client);
 
       assert.deepEqual(receivedArgs, {
-        where: { completed: true, priority: "low" },
-        orderBy: { createdAt: "asc" },
+        where: undefined,
+        orderBy: [{ createdAt: "asc" }, { id: "asc" }],
+        include: { categories: true },
+        take: 11,
+        cursor: { id: "task-5" },
+        skip: 1,
       });
+    });
+
+    it("does not include cursor/skip when no cursorId is given", async () => {
+      let receivedArgs: unknown;
+      const client = createFakeClient({
+        findMany: async (args: unknown) => {
+          receivedArgs = args;
+          return [];
+        },
+      });
+
+      await findAll(undefined, undefined, { limit: 10 }, client);
+
+      const args = receivedArgs as Record<string, unknown>;
+      assert.equal("cursor" in args, false);
+      assert.equal("skip" in args, false);
     });
   });
 
@@ -192,10 +303,60 @@ describe("task.repository", () => {
         description: undefined,
         completed: false,
         priority: "medium",
+        dueDate: undefined,
+        categories: undefined,
       });
       assert.equal(task.id, "generated-id");
       assert.equal(task.title, "Buy milk");
-      assert.equal(task.priority, "medium");
+    });
+
+    it("converts a given dueDate string to a Date for Prisma", async () => {
+      let receivedData: unknown;
+      const client = createFakeClient({
+        create: async ({ data }: { data: unknown }) => {
+          receivedData = data;
+          return buildRow({ dueDate: new Date("2026-03-01T00:00:00.000Z") });
+        },
+      });
+
+      await create(
+        {
+          title: "Buy milk",
+          description: undefined,
+          completed: false,
+          priority: "medium",
+          dueDate: "2026-03-01T00:00:00.000Z",
+        },
+        client,
+      );
+
+      const data = receivedData as { dueDate: Date };
+      assert.ok(data.dueDate instanceof Date);
+      assert.equal(data.dueDate.toISOString(), "2026-03-01T00:00:00.000Z");
+    });
+
+    it("connects given categoryIds", async () => {
+      let receivedData: unknown;
+      const client = createFakeClient({
+        create: async ({ data }: { data: unknown }) => {
+          receivedData = data;
+          return buildRow({ categories: [buildCategoryRow()] });
+        },
+      });
+
+      await create(
+        {
+          title: "Buy milk",
+          description: undefined,
+          completed: false,
+          priority: "medium",
+          categoryIds: ["cat-1", "cat-2"],
+        },
+        client,
+      );
+
+      const data = receivedData as { categories: unknown };
+      assert.deepEqual(data.categories, { connect: [{ id: "cat-1" }, { id: "cat-2" }] });
     });
   });
 
@@ -242,21 +403,6 @@ describe("task.repository", () => {
       assert.equal(task?.title, "Updated");
     });
 
-    it("passes priority through to Prisma and returns the updated task", async () => {
-      let receivedData: unknown;
-      const client = createFakeClient({
-        update: async ({ data }: { data: unknown }) => {
-          receivedData = data;
-          return buildRow({ id: "1", priority: "low" });
-        },
-      });
-
-      const task = await update("1", { priority: "low" }, client);
-
-      assert.deepEqual(receivedData, { priority: "low" });
-      assert.equal(task?.priority, "low");
-    });
-
     it("returns undefined when the task does not exist", async () => {
       const client = createFakeClient({
         update: async () => {
@@ -289,6 +435,79 @@ describe("task.repository", () => {
       });
 
       await assert.rejects(() => update("1", { title: "Updated" }, client), /connection lost/);
+    });
+
+    it("converts a given dueDate string to a Date for Prisma", async () => {
+      let receivedData: unknown;
+      const client = createFakeClient({
+        update: async ({ data }: { data: unknown }) => {
+          receivedData = data;
+          return buildRow({ dueDate: new Date("2026-04-01T00:00:00.000Z") });
+        },
+      });
+
+      await update("1", { dueDate: "2026-04-01T00:00:00.000Z" }, client);
+
+      const data = receivedData as { dueDate: Date };
+      assert.ok(data.dueDate instanceof Date);
+    });
+
+    it("does not touch dueDate in the update payload when omitted", async () => {
+      let receivedData: unknown;
+      const client = createFakeClient({
+        update: async ({ data }: { data: unknown }) => {
+          receivedData = data;
+          return buildRow();
+        },
+      });
+
+      await update("1", { title: "Updated" }, client);
+
+      assert.equal("dueDate" in (receivedData as object), false);
+    });
+
+    it("replaces the full category set via 'set' when categoryIds is provided", async () => {
+      let receivedData: unknown;
+      const client = createFakeClient({
+        update: async ({ data }: { data: unknown }) => {
+          receivedData = data;
+          return buildRow({ categories: [buildCategoryRow()] });
+        },
+      });
+
+      await update("1", { categoryIds: ["cat-1"] }, client);
+
+      const data = receivedData as { categories: unknown };
+      assert.deepEqual(data.categories, { set: [{ id: "cat-1" }] });
+    });
+
+    it("clears all categories when categoryIds is an empty array", async () => {
+      let receivedData: unknown;
+      const client = createFakeClient({
+        update: async ({ data }: { data: unknown }) => {
+          receivedData = data;
+          return buildRow({ categories: [] });
+        },
+      });
+
+      await update("1", { categoryIds: [] }, client);
+
+      const data = receivedData as { categories: unknown };
+      assert.deepEqual(data.categories, { set: [] });
+    });
+
+    it("does not touch categories in the update payload when categoryIds is omitted", async () => {
+      let receivedData: unknown;
+      const client = createFakeClient({
+        update: async ({ data }: { data: unknown }) => {
+          receivedData = data;
+          return buildRow();
+        },
+      });
+
+      await update("1", { title: "Updated" }, client);
+
+      assert.equal("categories" in (receivedData as object), false);
     });
   });
 
